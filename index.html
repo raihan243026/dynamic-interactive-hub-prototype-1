@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="en" class="dark-theme">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Interactive Hub</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Three.js CDN for 3D animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GSAP for smooth animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <style>
+        /* Custom CSS for theme transitions and font */
+        :root {
+            --bg-color-dark: #000000;
+            --text-color-dark: #ffffff;
+            --accent-color-dark: #cc0000; /* Dark Red */
+            --bg-color-red: #8b0000; /* Dark Red */
+            --text-color-red: #f0f0f0;
+            --accent-color-red: #000000;
+        }
+
+        html.dark-theme {
+            background-color: var(--bg-color-dark);
+            color: var(--text-color-dark);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        html.red-theme {
+            background-color: var(--bg-color-red);
+            color: var(--text-color-red);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        html {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth; /* Smooth scrolling for anchor links */
+        }
+
+        /* Canvas styling */
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Sidebar transition */
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+            z-index: 50; /* Ensure sidebar is above other content */
+        }
+
+        /* Overlay for mobile sidebar */
+        .overlay {
+            background-color: rgba(0, 0, 0, 0.7);
+            transition: opacity 0.3s ease-in-out;
+            z-index: 40;
+        }
+        .overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-color-dark);
+            border-radius: 10px;
+        }
+
+        html.red-theme ::-webkit-scrollbar-thumb {
+            background: var(--accent-color-red);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color-dark);
+            filter: brightness(1.2);
+        }
+
+        html.red-theme ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color-red);
+            filter: brightness(1.2);
+        }
+
+        /* Custom styles for theme toggle button */
+        .theme-toggle-button {
+            background-color: var(--accent-color-dark);
+            color: var(--text-color-dark);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .red-theme .theme-toggle-button {
+            background-color: var(--accent-color-red);
+            color: var(--text-color-red);
+        }
+
+        .theme-toggle-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Animation for section content */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Specific animation for the 3D object */
+        .three-object-animation {
+            animation: pulse 2s infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+
+        /* Game specific styles */
+        .game-canvas {
+            background-color: #333;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Snake Game specific styles */
+        #snake-game-canvas {
+            border: 2px solid var(--accent-color-dark);
+        }
+        html.red-theme #snake-game-canvas {
+            border-color: var(--accent-color-red);
+        }
+
+        /* Ball Game specific styles */
+        #ball-game-canvas {
+            border: 2px solid var(--accent-color-dark);
+        }
+        html.red-theme #ball-game-canvas {
+            border-color: var(--accent-color-red);
+        }
+
+        /* Puzzle Game specific styles */
+        #puzzle-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            width: 300px;
+            height: 300px;
+            max-width: 100%;
+            max-height: 100vw;
+            aspect-ratio: 1 / 1;
+            border: 2px solid var(--accent-color-dark);
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        html.red-theme #puzzle-board {
+            border-color: var(--accent-color-red);
+        }
+        .puzzle-tile {
+            width: 100%;
+            height: 100%;
+            background-size: 300% 300%;
+            cursor: pointer;
+            transition: transform 0.1s ease-in-out;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .puzzle-tile:hover {
+            transform: scale(1.02);
+            z-index: 1;
+        }
+        .puzzle-tile.empty {
+            background-image: none !important;
+            background-color: #222;
+        }
+
+        /* Fruit Ninja Game */
+        #fruit-ninja-canvas {
+            border: 2px solid var(--accent-color-dark);
+            cursor: none;
+        }
+        html.red-theme #fruit-ninja-canvas {
+            border-color: var(--accent-color-red);
+        }
+
+        /* Car Racing Game */
+        #car-racing-canvas {
+            border: 2px solid var(--accent-color-dark);
+        }
+        html.red-theme #car-racing-canvas {
+            border-color: var(--accent-color-red);
+        }
+
+        /* Calculator Styles */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 300px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #222;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        .calculator-output {
+            grid-column: 1 / -1;
+            background-color: #111;
+            color: #fff;
+            padding: 20px;
+            text-align: right;
+            font-size: 2.5em;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .calculator-button {
+            background-color: #444;
+            color: #fff;
+            border: none;
+            padding: 15px;
+            font-size: 1.5em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+        .calculator-button:hover {
+            background-color: #555;
+            transform: scale(1.02);
+        }
+        .calculator-button.operator {
+            background-color: var(--accent-color-dark);
+        }
+        html.red-theme .calculator-button.operator {
+            background-color: var(--accent-color-red);
+        }
+        .calculator-button.operator:hover {
+            background-color: var(--accent-color-dark);
+            filter: brightness(1.2);
+        }
+        html.red-theme .calculator-button.operator:hover {
+            background-color: var(--accent-color-red);
+            filter: brightness(1.2);
+        }
+        .calculator-button.span-two {
+            grid-column: span 2;
+        }
+
+        /* Calendar Styles */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        .calendar-header, .calendar-day-name {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px 0;
+        }
+        .calendar-day {
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #2a2a2a;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            min-height: 80px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            font-size: 0.9em;
+        }
+        @media (min-width: 768px) {
+            .calendar-day {
+                min-height: 100px;
+                font-size: 1em;
+            }
+        }
+        .calendar-day:hover {
+            background-color: #3a3a3a;
+        }
+        .calendar-day.current-month {
+            color: var(--text-color-dark);
+        }
+        .calendar-day.other-month {
+            color: #666;
+            background-color: #1a1a1a;
+        }
+        .calendar-day.selected {
+            background-color: var(--accent-color-dark);
+            color: white;
+        }
+        html.red-theme .calendar-day.selected {
+            background-color: var(--accent-color-red);
+        }
+        .calendar-day.has-tasks::after {
+            content: '•';
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: lime;
+            font-size: 1.5em;
+            line-height: 0;
+        }
+        .task-item {
+            font-size: 0.7em;
+            margin-top: 5px;
+            background-color: rgba(255,255,255,0.1);
+            padding: 2px 5px;
+            border-radius: 4px;
+            max-width: 90%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        @media (min-width: 768px) {
+            .task-item {
+                font-size: 0.8em;
+            }
+        }
+
+        /* AI Image Generator */
+        #ai-image-display {
+            min-height: 300px;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+        #ai-image-display img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        #ai-image-display .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid var(--accent-color-dark);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative overflow-x-hidden">
+
+    <canvas id="webgl-canvas"></canvas>
+
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black opacity-70 z-40 hidden lg:hidden overlay"></div>
+
+    <aside id="sidebar" class="sidebar fixed top-0 left-0 w-64 h-full bg-gray-900 text-white p-6 transform -translate-x-full lg:translate-x-0 lg:relative lg:flex-shrink-0 lg:h-auto lg:bg-transparent lg:p-0">
+        <nav class="flex flex-col space-y-4 pt-16 lg:pt-0">
+            <a href="#home" class="text-lg font-semibold hover:text-red-500 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800">Home</a>
+            <a href="#about" class="text-lg font-semibold hover:text-red-500 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800">About</a>
+            <a href="#portfolio" class="text-lg font-semibold hover:text-red-500 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800">Portfolio</a>
+            <a href="#games" class="text-lg font-semibold hover:text-red-500 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800">Games</a>
+            <a href="#web-apps" class="text-lg font-semibold hover:text-red-500 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800">Web Apps</a>
+            <a href="#tools" class="text-lg font-semibold hover:text-red-500 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800">Tools</a>
+            <a href="#calendar-todo" class="text-lg font-semibold hover:text-red-500 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800">Calendar & To-Do</a>
+            <a href="#ai-generator" class="text-lg font-semibold hover:text-red-500 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800">AI Image Generator</a>
+            <a href="#contact" class="text-lg font-semibold hover:text-red-500 transition-colors duration-200 p-2 rounded-lg hover:bg-gray-800">Contact</a>
+        </nav>
+        <button id="close-sidebar-btn" class="absolute top-4 right-4 text-white text-2xl lg:hidden" aria-label="Close Sidebar">
+            <i class="fas fa-times"></i>
+        </button>
+    </aside>
+
+    <div class="flex-1 flex flex-col lg:ml-64 p-4 lg:p-8 relative z-10">
+        <header class="flex justify-between items-center py-4 px-4 lg:px-0">
+            <h1 class="text-3xl lg:text-4xl font-extrabold text-white drop-shadow-lg">
+                <span class="text-red-500">Dynamic</span> Interactive
+            </h1>
+            <div class="flex items-center space-x-4">
+                <button id="theme-toggle" class="theme-toggle-button" aria-label="Toggle Theme">
+                    <i class="fas fa-moon mr-2"></i> Toggle Theme
+                </button>
+                <button id="menu-toggle" class="lg:hidden text-white text-3xl" aria-label="Open Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 container mx-auto py-8 space-y-16 lg:space-y-24">
+
+            <section id="home" class="min-h-[calc(100vh-120px)] flex flex-col justify-center items-center text-center">
+                <h2 class="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-lg animate-pulse">
+                    Welcome to the <span class="text-red-500">Interactive</span> Dimension
+                </h2>
+                <p class="text-lg md:text-xl max-w-3xl mb-8 text-gray-300">
+                    Explore a unique blend of creativity and technology. This site showcases interactive 3D elements, responsive design, and dynamic themes, all crafted for a seamless user experience.
+                </p>
+                <a href="#about" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
+                    Discover More
+                </a>
+            </section>
+
+            <section id="about" class="py-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-center mb-12">About Our Vision</h2>
+                <div class="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+                    <div class="lg:w-1/2">
+                        <img src="https://placehold.co/600x400/1a1a1a/e0e0e0?text=Futuristic+Design+Concept" alt="Futuristic Design Concept Art" class="rounded-lg shadow-xl w-full h-auto object-cover transform hover:scale-105 transition-transform duration-300">
+                        <p class="text-sm text-gray-400 mt-2 text-center">A conceptual design reflecting innovation and modern aesthetics.</p>
+                    </div>
+                    <div class="lg:w-1/2 text-lg leading-relaxed text-gray-200">
+                        <p class="mb-4">
+                            At **Dynamic Interactive**, we are passionate about crafting immersive digital experiences that captivate and engage. Our philosophy centers on blending cutting-edge technology with intuitive design to create web platforms that are not just functional, but truly memorable.
+                        </p>
+                        <p>
+                            This portfolio is a testament to our commitment to innovation, featuring dynamic 3D elements, a fully responsive layout, and interactive tools designed to provide a rich and adaptable user journey across all devices.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="portfolio" class="py-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-center mb-12">Our Creative Works</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
+                        <img src="https://placehold.co/400x250/333333/FFFFFF?text=Interactive+Dashboard" alt="Interactive Dashboard Project" class="rounded-md mb-4 w-full h-32 object-cover">
+                        <h3 class="text-2xl font-semibold mb-2">Data Visualization Dashboard</h3>
+                        <p class="text-gray-300 text-sm">A responsive dashboard designed for intuitive data exploration and real-time analytics.</p>
+                        <a href="#" class="text-red-500 hover:underline mt-4 inline-block">View Case Study <i class="fas fa-arrow-right ml-1 text-sm"></i></a>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
+                        <img src="https://placehold.co/400x250/555555/FFFFFF?text=VR+Experience" alt="Virtual Reality Experience Project" class="rounded-md mb-4 w-full h-32 object-cover">
+                        <h3 class="text-2xl font-semibold mb-2">Immersive VR Environment</h3>
+                        <p class="text-gray-300 text-sm">Developed a captivating virtual reality experience for educational and entertainment purposes.</p>
+                        <a href="#" class="text-red-500 hover:underline mt-4 inline-block">Explore Project <i class="fas fa-arrow-right ml-1 text-sm"></i></a>
+                    </div>
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6 transform hover:scale-105 transition-transform duration-300">
+                        <img src="https://placehold.co/400x250/777777/FFFFFF?text=Generative+Art+Platform" alt="Generative Art Platform Project" class="rounded-md mb-4 w-full h-32 object-cover">
+                        <h3 class="text-2xl font-semibold mb-2">AI-Powered Art Generator</h3>
+                        <p class="text-gray-300 text-sm">A platform leveraging generative AI to create unique and evolving digital artworks.</p>
+                        <a href="#" class="text-red-500 hover:underline mt-4 inline-block">See Live Demo <i class="fas fa-arrow-right ml-1 text-sm"></i></a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="games" class="py-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-center mb-12">Interactive Games</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Bouncing Balls Game -->
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6 flex flex-col items-center justify-center space-y-4">
+                        <h3 class="text-2xl font-semibold mb-2">Bouncing Balls</h3>
+                        <canvas id="ball-game-canvas" class="game-canvas w-full h-64"></canvas>
+                        <button id="start-ball-game-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-colors duration-300">
+                            Start Game
+                        </button>
+                    </div>
+
+                    <!-- Puzzle Game -->
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6 flex flex-col items-center justify-center space-y-4">
+                        <h3 class="text-2xl font-semibold mb-2">Sliding Puzzle</h3>
+                        <div id="puzzle-board"></div>
+                        <div class="flex space-x-4">
+                            <button id="start-puzzle-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-colors duration-300">
+                                Start Game
+                            </button>
+                            <button id="solve-puzzle-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-colors duration-300">
+                                Solve
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Car Racing Game -->
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6 flex flex-col items-center justify-center space-y-4">
+                        <h3 class="text-2xl font-semibold mb-2">Car Racing</h3>
+                        <canvas id="car-racing-canvas" class="game-canvas w-full h-64"></canvas>
+                        <button id="start-car-racing-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full shadow-lg transition-colors duration-300">
+                            Start Game
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="web-apps" class="py-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-center mb-12">Dynamic Web Apps</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Food Delivery App -->
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6">
+                        <h3 class="text-2xl font-semibold mb-4">Food Delivery App</h3>
+                        <div id="food-items-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <!-- Food items will be dynamically injected here -->
+                        </div>
+                        <div class="flex justify-between items-center bg-gray-900 p-4 rounded-lg">
+                            <span class="text-lg font-bold">Cart Total: <span id="cart-total">$0.00</span></span>
+                            <button id="checkout-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full shadow-lg transition-colors duration-300">
+                                Checkout
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Student Information System -->
+                    <div class="bg-gray-800 rounded-lg shadow-xl p-6 col-span-1 md:col-span-2">
+                        <h3 class="text-2xl font-semibold mb-4">Student Information System</h3>
+                        <form id="student-form" class="mb-4 flex flex-col md:flex-row gap-4">
+                            <input type="text" id="student-name" placeholder="Student Name" required class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                            <input type="text" id="student-id" placeholder="Student ID" required class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full transition-colors duration-300">Add Student</button>
+                        </form>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-gray-900 rounded-lg">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">ID</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="student-table-body" class="divide-y divide-gray-700">
+                                    <!-- Student data will be dynamically injected here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tools" class="py-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-center mb-12">Handy Tools</h2>
+                <div class="flex items-center justify-center">
+                    <div class="calculator-grid">
+                        <div class="calculator-output" id="calculator-output">0</div>
+                        <button class="calculator-button span-two" data-action="clear">AC</button>
+                        <button class="calculator-button" data-action="delete">DEL</button>
+                        <button class="calculator-button operator" data-operator="/">÷</button>
+                        <button class="calculator-button" data-number="7">7</button>
+                        <button class="calculator-button" data-number="8">8</button>
+                        <button class="calculator-button" data-number="9">9</button>
+                        <button class="calculator-button operator" data-operator="*">×</button>
+                        <button class="calculator-button" data-number="4">4</button>
+                        <button class="calculator-button" data-number="5">5</button>
+                        <button class="calculator-button" data-number="6">6</button>
+                        <button class="calculator-button operator" data-operator="-">-</button>
+                        <button class="calculator-button" data-number="1">1</button>
+                        <button class="calculator-button" data-number="2">2</button>
+                        <button class="calculator-button" data-number="3">3</button>
+                        <button class="calculator-button operator" data-operator="+">+</button>
+                        <button class="calculator-button span-two" data-number="0">0</button>
+                        <button class="calculator-button" data-action="decimal">.</button>
+                        <button class="calculator-button operator" data-action="calculate">=</button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="calendar-todo" class="py-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-center mb-12">Calendar & To-Do List</h2>
+                <div class="max-w-4xl mx-auto bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <button id="prev-month-btn" class="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full"><i class="fas fa-chevron-left"></i></button>
+                        <h3 id="current-month-year" class="text-2xl font-bold"></h3>
+                        <button id="next-month-btn" class="bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-full"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div id="calendar-days-names" class="calendar-header calendar-grid text-gray-400">
+                        <div class="calendar-day-name">Sun</div>
+                        <div class="calendar-day-name">Mon</div>
+                        <div class="calendar-day-name">Tue</div>
+                        <div class="calendar-day-name">Wed</div>
+                        <div class="calendar-day-name">Thu</div>
+                        <div class="calendar-day-name">Fri</div>
+                        <div class="calendar-day-name">Sat</div>
+                    </div>
+                    <div id="calendar-grid" class="calendar-grid">
+                        <!-- Calendar days will be dynamically injected here -->
+                    </div>
+                    <div id="todo-list" class="mt-8 p-4 bg-gray-900 rounded-lg">
+                        <h4 class="text-xl font-bold mb-4">To-Do List for <span id="selected-date"></span></h4>
+                        <div id="tasks-container" class="space-y-2">
+                            <!-- Tasks will be dynamically injected here -->
+                        </div>
+                        <form id="add-task-form" class="mt-4 flex gap-2">
+                            <input type="text" id="new-task-input" placeholder="Add a new task..." required class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg"><i class="fas fa-plus"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <section id="ai-generator" class="py-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-center mb-12">AI Image Generator</h2>
+                <div class="max-w-4xl mx-auto bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <form id="ai-image-form" class="flex flex-col md:flex-row gap-4 mb-4">
+                        <input type="text" id="ai-prompt-input" placeholder="Enter a prompt for the AI..." required class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-red-500">
+                        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-full transition-colors duration-300">
+                            Generate Image
+                        </button>
+                    </form>
+                    <div id="ai-image-display">
+                        <p id="ai-placeholder-text" class="text-gray-500 text-lg">Your generated image will appear here.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="contact" class="py-16">
+                <h2 class="text-4xl lg:text-5xl font-bold text-center mb-12">Get in Touch</h2>
+                <div class="max-w-2xl mx-auto text-center text-lg leading-relaxed text-gray-300">
+                    <p class="mb-4">
+                        We are always open to new ideas and collaborations. If you have a project in mind or just want to say hello, feel free to reach out to us.
+                    </p>
+                    <a href="mailto:contact@dynamicinteractive.com" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105">
+                        Send us an Email
+                    </a>
+                </div>
+            </section>
+
+        </main>
+        <footer class="py-4 text-center text-xs text-gray-500">
+            <p>&copy; 2025 Dynamic Interactive Hub. All rights reserved.</p>
+        </footer>
+    </div>
+    
+    <div id="message-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[100] hidden">
+        <div class="bg-gray-900 p-6 rounded-lg shadow-xl max-w-sm w-full space-y-4">
+            <h3 id="modal-title" class="text-xl font-bold text-white"></h3>
+            <p id="modal-message" class="text-gray-300"></p>
+            <div class="flex justify-end">
+                <button id="modal-close-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-full">Close</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // ===================================
+            // MODAL FUNCTIONS
+            // ===================================
+            const messageModal = document.getElementById('message-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+
+            function showModal(title, message) {
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+                messageModal.classList.remove('hidden');
+            }
+
+            modalCloseBtn.addEventListener('click', () => {
+                messageModal.classList.add('hidden');
+            });
+
+
+            // ===================================
+            // THEME TOGGLE & SIDEBAR
+            // ===================================
+            const themeToggleBtn = document.getElementById('theme-toggle');
+            const htmlElement = document.documentElement;
+            const sidebar = document.getElementById('sidebar');
+            const menuToggleBtn = document.getElementById('menu-toggle');
+            const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
+            const sidebarLinks = document.querySelectorAll('#sidebar a');
+            
+            const savedTheme = localStorage.getItem('theme') || 'dark-theme';
+            htmlElement.classList.add(savedTheme);
+
+            themeToggleBtn.addEventListener('click', () => {
+                if (htmlElement.classList.contains('dark-theme')) {
+                    htmlElement.classList.remove('dark-theme');
+                    htmlElement.classList.add('red-theme');
+                    localStorage.setItem('theme', 'red-theme');
+                } else {
+                    htmlElement.classList.remove('red-theme');
+                    htmlElement.classList.add('dark-theme');
+                    localStorage.setItem('theme', 'dark-theme');
+                }
+            });
+
+            menuToggleBtn.addEventListener('click', () => {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.remove('hidden');
+            });
+
+            closeSidebarBtn.addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+            });
+
+            sidebarOverlay.addEventListener('click', () => {
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('hidden');
+            });
+
+            // Close sidebar when a link is clicked
+            sidebarLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    sidebar.classList.add('-translate-x-full');
+                    sidebarOverlay.classList.add('hidden');
+                });
+            });
+
+
+            // ===================================
+            // THREE.JS ANIMATION
+            // ===================================
+            const canvas = document.querySelector('#webgl-canvas');
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0); // Transparent background
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 2.5;
+
+            const geometry = new THREE.TorusKnotGeometry(1, 0.3, 100, 16);
+            const material = new THREE.MeshPhysicalMaterial({
+                color: 0xcc0000,
+                roughness: 0.1,
+                metalness: 0.9,
+                clearcoat: 1,
+                clearcoatRoughness: 0.1
+            });
+            const torus = new THREE.Mesh(geometry, material);
+            scene.add(torus);
+
+            const animateThree = () => {
+                requestAnimationFrame(animateThree);
+                torus.rotation.x += 0.005;
+                torus.rotation.y += 0.005;
+                renderer.render(scene, camera);
+            };
+            animateThree();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+            
+
+            // ===================================
+            // BOUNCING BALLS GAME
+            // ===================================
+            const ballCanvas = document.getElementById('ball-game-canvas');
+            const ballCtx = ballCanvas.getContext('2d');
+            const startBallGameBtn = document.getElementById('start-ball-game-btn');
+            
+            let balls = [];
+            let ballGameAnimationId;
+            let ballGameRunning = false;
+
+            class Ball {
+                constructor(x, y, radius, color) {
+                    this.x = x;
+                    this.y = y;
+                    this.radius = radius;
+                    this.color = color;
+                    this.dx = (Math.random() - 0.5) * 4;
+                    this.dy = (Math.random() - 0.5) * 4;
+                }
+
+                draw() {
+                    ballCtx.beginPath();
+                    ballCtx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                    ballCtx.fillStyle = this.color;
+                    ballCtx.fill();
+                    ballCtx.closePath();
+                }
+
+                update() {
+                    if (this.x + this.radius > ballCanvas.width || this.x - this.radius < 0) {
+                        this.dx = -this.dx;
+                    }
+                    if (this.y + this.radius > ballCanvas.height || this.y - this.radius < 0) {
+                        this.dy = -this.dy;
+                    }
+                    this.x += this.dx;
+                    this.y += this.dy;
+                }
+            }
+
+            function initBalls() {
+                balls = [];
+                for (let i = 0; i < 20; i++) {
+                    const radius = Math.random() * 15 + 5;
+                    const x = Math.random() * (ballCanvas.width - 2 * radius) + radius;
+                    const y = Math.random() * (ballCanvas.height - 2 * radius) + radius;
+                    const color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+                    balls.push(new Ball(x, y, radius, color));
+                }
+            }
+
+            function animateBalls() {
+                ballCtx.clearRect(0, 0, ballCanvas.width, ballCanvas.height);
+                balls.forEach(ball => {
+                    ball.draw();
+                    ball.update();
+                });
+                ballGameAnimationId = requestAnimationFrame(animateBalls);
+            }
+
+            startBallGameBtn.addEventListener('click', () => {
+                if (ballGameRunning) {
+                    cancelAnimationFrame(ballGameAnimationId);
+                    ballGameRunning = false;
+                    startBallGameBtn.textContent = 'Start Game';
+                    startBallGameBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    startBallGameBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                } else {
+                    initBalls();
+                    animateBalls();
+                    ballGameRunning = true;
+                    startBallGameBtn.textContent = 'Stop Game';
+                    startBallGameBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    startBallGameBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
+            });
+
+
+            // ===================================
+            // SLIDING PUZZLE GAME
+            // ===================================
+            const puzzleBoard = document.getElementById('puzzle-board');
+            const startPuzzleBtn = document.getElementById('start-puzzle-btn');
+            const solvePuzzleBtn = document.getElementById('solve-puzzle-btn');
+            const puzzleImage = new Image();
+            puzzleImage.src = 'https://placehold.co/300x300/f0f0f0/000000?text=Puzzle+Image';
+
+            const gridSize = 3;
+            let tiles = [];
+            let boardState = [];
+            let emptyTile = null;
+            let puzzleRunning = false;
+
+            puzzleImage.onload = () => {
+                createTiles();
+                // We'll also call it in the start button, but this ensures a solved state is visible initially.
+            };
+
+            function createTiles() {
+                puzzleBoard.innerHTML = '';
+                tiles = [];
+                boardState = [];
+                for (let i = 0; i < gridSize * gridSize; i++) {
+                    const tile = document.createElement('div');
+                    tile.classList.add('puzzle-tile');
+                    
+                    const row = Math.floor(i / gridSize);
+                    const col = i % gridSize;
+                    tile.style.backgroundPosition = `-${col * 100}% -${row * 100}%`;
+                    tile.style.backgroundImage = `url(${puzzleImage.src})`;
+                    tile.dataset.originalIndex = i;
+                    
+                    if (i === gridSize * gridSize - 1) {
+                        tile.classList.add('empty');
+                        emptyTile = tile;
+                    }
+
+                    tiles.push(tile);
+                    boardState.push(i);
+                    puzzleBoard.appendChild(tile);
+                }
+            }
+
+            function shuffleTiles() {
+                for (let i = boardState.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [boardState[i], boardState[j]] = [boardState[j], boardState[i]];
+                }
+                updateBoard();
+            }
+
+            function updateBoard() {
+                for (let i = 0; i < boardState.length; i++) {
+                    const originalIndex = boardState[i];
+                    const tile = tiles.find(t => parseInt(t.dataset.originalIndex) === originalIndex);
+                    puzzleBoard.appendChild(tile);
+                }
+            }
+
+            function isSolved() {
+                for (let i = 0; i < boardState.length; i++) {
+                    if (boardState[i] !== i) return false;
+                }
+                return true;
+            }
+
+            function moveTile(clickedIndex) {
+                const emptyIndex = boardState.indexOf(parseInt(emptyTile.dataset.originalIndex));
+                const clickedRow = Math.floor(clickedIndex / gridSize);
+                const clickedCol = clickedIndex % gridSize;
+                const emptyRow = Math.floor(emptyIndex / gridSize);
+                const emptyCol = emptyIndex % gridSize;
+
+                const isAdjacent = (
+                    (Math.abs(clickedRow - emptyRow) === 1 && clickedCol === emptyCol) ||
+                    (Math.abs(clickedCol - emptyCol) === 1 && clickedRow === emptyRow)
+                );
+
+                if (isAdjacent) {
+                    [boardState[clickedIndex], boardState[emptyIndex]] = [boardState[emptyIndex], boardState[clickedIndex]];
+                    updateBoard();
+                    if (isSolved()) {
+                        showModal('Congratulations!', 'You solved the puzzle!');
+                        puzzleRunning = false;
+                        startPuzzleBtn.textContent = 'Start Game';
+                    }
+                }
+            }
+
+            puzzleBoard.addEventListener('click', (e) => {
+                if (!puzzleRunning) return;
+                const tile = e.target.closest('.puzzle-tile');
+                if (tile && !tile.classList.contains('empty')) {
+                    const clickedIndex = Array.from(puzzleBoard.children).indexOf(tile);
+                    moveTile(clickedIndex);
+                }
+            });
+
+            startPuzzleBtn.addEventListener('click', () => {
+                if (puzzleRunning) {
+                    showModal('Game Stopped', 'The puzzle game has been reset.');
+                    createTiles();
+                    puzzleRunning = false;
+                    startPuzzleBtn.textContent = 'Start Game';
+                    startPuzzleBtn.classList.remove('bg-red-600');
+                    startPuzzleBtn.classList.add('bg-green-600');
+                } else {
+                    createTiles();
+                    shuffleTiles();
+                    puzzleRunning = true;
+                    startPuzzleBtn.textContent = 'Stop Game';
+                    startPuzzleBtn.classList.remove('bg-green-600');
+                    startPuzzleBtn.classList.add('bg-red-600');
+                }
+            });
+
+            solvePuzzleBtn.addEventListener('click', () => {
+                createTiles();
+                puzzleRunning = false;
+                startPuzzleBtn.textContent = 'Start Game';
+                startPuzzleBtn.classList.remove('bg-red-600');
+                startPuzzleBtn.classList.add('bg-green-600');
+                showModal('Solved!', 'The puzzle has been solved for you.');
+            });
+
+
+            // ===================================
+            // CAR RACING GAME
+            // ===================================
+            const carCanvas = document.getElementById('car-racing-canvas');
+            const carCtx = carCanvas.getContext('2d');
+            const startCarRacingBtn = document.getElementById('start-car-racing-btn');
+
+            let carGameRunning = false;
+            let carGameAnimationId;
+            let carX, carY, carWidth, carHeight;
+            let obstacles = [];
+            let score = 0;
+            let speed = 2;
+            const laneWidth = carCanvas.width / 3;
+
+            function initCarGame() {
+                carCanvas.width = 300;
+                carCanvas.height = 400;
+                carX = carCanvas.width / 2 - 20;
+                carY = carCanvas.height - 60;
+                carWidth = 40;
+                carHeight = 50;
+                obstacles = [];
+                score = 0;
+                speed = 2;
+            }
+
+            function drawCar() {
+                carCtx.fillStyle = 'blue';
+                carCtx.fillRect(carX, carY, carWidth, carHeight);
+            }
+
+            function createObstacle() {
+                const x = Math.floor(Math.random() * 3) * laneWidth + (laneWidth - 40) / 2;
+                const y = -50;
+                const width = 40;
+                const height = 50;
+                const color = `hsl(${Math.random() * 360}, 80%, 50%)`;
+                obstacles.push({ x, y, width, height, color });
+            }
+
+            function drawObstacles() {
+                obstacles.forEach(obstacle => {
+                    carCtx.fillStyle = obstacle.color;
+                    carCtx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                });
+            }
+
+            function updateCarGame() {
+                carCtx.clearRect(0, 0, carCanvas.width, carCanvas.height);
+
+                // Update and draw obstacles
+                if (Math.random() < 0.02) {
+                    createObstacle();
+                }
+                obstacles = obstacles.filter(obstacle => {
+                    obstacle.y += speed;
+                    return obstacle.y < carCanvas.height;
+                });
+                drawObstacles();
+
+                // Draw car
+                drawCar();
+
+                // Collision detection
+                for (let obstacle of obstacles) {
+                    if (carX < obstacle.x + obstacle.width &&
+                        carX + carWidth > obstacle.x &&
+                        carY < obstacle.y + obstacle.height &&
+                        carY + carHeight > obstacle.y) {
+                        endCarGame();
+                        return;
+                    }
+                }
+
+                score++;
+                carCtx.fillStyle = 'white';
+                carCtx.font = '16px Inter';
+                carCtx.fillText(`Score: ${score}`, 10, 20);
+
+                carGameAnimationId = requestAnimationFrame(updateCarGame);
+            }
+
+            function endCarGame() {
+                cancelAnimationFrame(carGameAnimationId);
+                carGameRunning = false;
+                startCarRacingBtn.textContent = 'Restart Game';
+                startCarRacingBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                startCarRacingBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                showModal('Game Over!', `Your final score is: ${score}`);
+            }
+
+            carCanvas.addEventListener('mousemove', (e) => {
+                if (carGameRunning) {
+                    const rect = carCanvas.getBoundingClientRect();
+                    const scaleX = carCanvas.width / rect.width;
+                    const mouseX = (e.clientX - rect.left) * scaleX;
+                    carX = mouseX - carWidth / 2;
+                    if (carX < 0) carX = 0;
+                    if (carX + carWidth > carCanvas.width) carX = carCanvas.width - carWidth;
+                }
+            });
+
+            startCarRacingBtn.addEventListener('click', () => {
+                if (carGameRunning) {
+                    endCarGame();
+                } else {
+                    initCarGame();
+                    updateCarGame();
+                    carGameRunning = true;
+                    startCarRacingBtn.textContent = 'Stop Game';
+                    startCarRacingBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    startCarRacingBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                }
+            });
+
+
+            // ===================================
+            // FOOD DELIVERY APP
+            // ===================================
+            const foodItemsContainer = document.getElementById('food-items-container');
+            const cartTotalSpan = document.getElementById('cart-total');
+            const checkoutBtn = document.getElementById('checkout-btn');
+
+            let cart = JSON.parse(localStorage.getItem('foodCart')) || [];
+            
+            const foodItems = [
+                { id: 1, name: 'Burger', price: 9.99, imageUrl: 'https://placehold.co/100x100/333333/FFFFFF?text=Burger' },
+                { id: 2, name: 'Pizza', price: 12.50, imageUrl: 'https://placehold.co/100x100/555555/FFFFFF?text=Pizza' },
+                { id: 3, name: 'Fries', price: 3.99, imageUrl: 'https://placehold.co/100x100/777777/FFFFFF?text=Fries' },
+                { id: 4, name: 'Tacos', price: 8.75, imageUrl: 'https://placehold.co/100x100/999999/FFFFFF?text=Tacos' },
+            ];
+
+            function renderFoodItems() {
+                foodItemsContainer.innerHTML = '';
+                foodItems.forEach(item => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.classList.add('bg-gray-700', 'rounded-lg', 'p-4', 'flex', 'items-center', 'gap-4', 'hover:bg-gray-600', 'transition-colors');
+                    itemDiv.innerHTML = `
+                        <img src="${item.imageUrl}" alt="${item.name}" class="w-16 h-16 rounded-lg object-cover">
+                        <div class="flex-1">
+                            <h4 class="text-xl font-bold">${item.name}</h4>
+                            <p class="text-gray-300">$${item.price.toFixed(2)}</p>
+                        </div>
+                        <button class="add-to-cart-btn bg-red-500 hover:bg-red-600 text-white p-2 rounded-full" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    `;
+                    foodItemsContainer.appendChild(itemDiv);
+                });
+            }
+
+            function updateCartCount() {
+                const total = cart.reduce((sum, item) => sum + item.price, 0);
+                cartTotalSpan.textContent = `$${total.toFixed(2)}`;
+                localStorage.setItem('foodCart', JSON.stringify(cart));
+            }
+
+            foodItemsContainer.addEventListener('click', (e) => {
+                if (e.target.closest('.add-to-cart-btn')) {
+                    const btn = e.target.closest('.add-to-cart-btn');
+                    const itemId = parseInt(btn.dataset.id);
+                    const itemName = btn.dataset.name;
+                    const itemPrice = parseFloat(btn.dataset.price);
+
+                    const itemToAdd = { id: itemId, name: itemName, price: itemPrice };
+                    cart.push(itemToAdd);
+                    updateCartCount();
+                    showModal('Added to Cart', `${itemName} has been added to your cart.`);
+                }
+            });
+
+            checkoutBtn.addEventListener('click', () => {
+                if (cart.length > 0) {
+                    showModal('Checkout', `Your total is $${cart.reduce((sum, item) => sum + item.price, 0).toFixed(2)}. Thank you for your purchase!`);
+                    cart = [];
+                    updateCartCount();
+                } else {
+                    showModal('Cart is Empty', 'Please add some items before checking out.');
+                }
+            });
+
+
+            // ===================================
+            // STUDENT INFORMATION SYSTEM
+            // ===================================
+            const studentForm = document.getElementById('student-form');
+            const studentNameInput = document.getElementById('student-name');
+            const studentIdInput = document.getElementById('student-id');
+            const studentTableBody = document.getElementById('student-table-body');
+            let students = JSON.parse(localStorage.getItem('students')) || [];
+
+            function renderStudents() {
+                studentTableBody.innerHTML = '';
+                students.forEach((student, index) => {
+                    const row = document.createElement('tr');
+                    row.classList.add('hover:bg-gray-700');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">${student.name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${student.id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button data-index="${index}" class="edit-student-btn text-indigo-400 hover:text-indigo-600 transition-colors duration-200 mr-2"><i class="fas fa-edit"></i></button>
+                            <button data-index="${index}" class="delete-student-btn text-red-400 hover:text-red-600 transition-colors duration-200"><i class="fas fa-trash"></i></button>
+                        </td>
+                    `;
+                    studentTableBody.appendChild(row);
+                });
+                localStorage.setItem('students', JSON.stringify(students));
+            }
+
+            studentForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = studentNameInput.value;
+                const id = studentIdInput.value;
+                if (name && id) {
+                    students.push({ name, id });
+                    studentNameInput.value = '';
+                    studentIdInput.value = '';
+                    renderStudents();
+                }
+            });
+
+            studentTableBody.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-student-btn')) {
+                    const index = e.target.closest('button').dataset.index;
+                    students.splice(index, 1);
+                    renderStudents();
+                }
+                // Edit functionality can be added here with a modal or a form toggle
+            });
+
+
+            // ===================================
+            // CALCULATOR
+            // ===================================
+            const calculatorOutput = document.getElementById('calculator-output');
+            const calculatorButtons = document.querySelectorAll('.calculator-button');
+            let currentInput = '';
+            let previousInput = '';
+            let operator = null;
+            let shouldResetScreen = false;
+
+            function clearCalculator() {
+                currentInput = '';
+                previousInput = '';
+                operator = null;
+                shouldResetScreen = false;
+                calculatorOutput.textContent = '0';
+            }
+
+            function appendNumber(number) {
+                if (shouldResetScreen) {
+                    currentInput = number;
+                    shouldResetScreen = false;
+                } else {
+                    if (number === '.' && currentInput.includes('.')) return;
+                    currentInput += number;
+                }
+                calculatorOutput.textContent = currentInput;
+            }
+
+            function setOperator(op) {
+                if (currentInput === '') return;
+                if (previousInput !== '') {
+                    calculate();
+                }
+                operator = op;
+                previousInput = currentInput;
+                currentInput = '';
+                shouldResetScreen = true;
+            }
+
+            function calculate() {
+                if (previousInput === '' || currentInput === '' || operator === null) return;
+                const prev = parseFloat(previousInput);
+                const current = parseFloat(currentInput);
+                let result = 0;
+                switch (operator) {
+                    case '+': result = prev + current; break;
+                    case '-': result = prev - current; break;
+                    case '*': result = prev * current; break;
+                    case '/': result = prev / current; break;
+                }
+                currentInput = result.toString();
+                calculatorOutput.textContent = currentInput;
+                previousInput = '';
+                operator = null;
+                shouldResetScreen = true;
+            }
+
+            calculatorButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const action = button.dataset.action;
+                    const number = button.dataset.number;
+                    const op = button.dataset.operator;
+
+                    if (number != null) {
+                        appendNumber(number);
+                    } else if (op != null) {
+                        setOperator(op);
+                    } else if (action === 'clear') {
+                        clearCalculator();
+                    } else if (action === 'delete') {
+                        currentInput = currentInput.slice(0, -1);
+                        if (currentInput === '') currentInput = '0';
+                        calculatorOutput.textContent = currentInput;
+                    } else if (action === 'calculate') {
+                        calculate();
+                    } else if (action === 'decimal') {
+                        appendNumber('.');
+                    }
+                });
+            });
+
+
+            // ===================================
+            // CALENDAR & TO-DO LIST
+            // ===================================
+            const calendarGrid = document.getElementById('calendar-grid');
+            const currentMonthYear = document.getElementById('current-month-year');
+            const prevMonthBtn = document.getElementById('prev-month-btn');
+            const nextMonthBtn = document.getElementById('next-month-btn');
+            const selectedDateSpan = document.getElementById('selected-date');
+            const tasksContainer = document.getElementById('tasks-container');
+            const addTaskForm = document.getElementById('add-task-form');
+            const newTaskInput = document.getElementById('new-task-input');
+
+            let date = new Date();
+            let selectedDate = new Date();
+            let tasks = JSON.parse(localStorage.getItem('calendarTasks')) || {};
+
+            function renderCalendar() {
+                date.setDate(1);
+                const firstDayIndex = date.getDay();
+                const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+                const prevLastDay = new Date(date.getFullYear(), date.getMonth(), 0).getDate();
+                const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+                currentMonthYear.textContent = `${months[date.getMonth()]} ${date.getFullYear()}`;
+                calendarGrid.innerHTML = '';
+
+                // Prev month days
+                for (let x = firstDayIndex; x > 0; x--) {
+                    const day = document.createElement('div');
+                    day.classList.add('calendar-day', 'other-month');
+                    day.textContent = prevLastDay - x + 1;
+                    calendarGrid.appendChild(day);
+                }
+
+                // Current month days
+                for (let i = 1; i <= lastDay; i++) {
+                    const day = document.createElement('div');
+                    day.classList.add('calendar-day', 'current-month');
+                    day.textContent = i;
+                    
+                    const dayDate = `${date.getFullYear()}-${date.getMonth() + 1}-${i}`;
+                    day.dataset.date = dayDate;
+
+                    if (tasks[dayDate] && tasks[dayDate].length > 0) {
+                        day.classList.add('has-tasks');
+                    }
+
+                    if (i === selectedDate.getDate() && date.getMonth() === selectedDate.getMonth() && date.getFullYear() === selectedDate.getFullYear()) {
+                        day.classList.add('selected');
+                    }
+
+                    day.addEventListener('click', () => {
+                        document.querySelectorAll('.calendar-day.selected').forEach(d => d.classList.remove('selected'));
+                        day.classList.add('selected');
+                        selectedDate = new Date(date.getFullYear(), date.getMonth(), i);
+                        renderTasks();
+                    });
+                    calendarGrid.appendChild(day);
+                }
+
+                // Next month days
+                const nextDays = 42 - (firstDayIndex + lastDay);
+                for (let i = 1; i <= nextDays; i++) {
+                    const day = document.createElement('div');
+                    day.classList.add('calendar-day', 'other-month');
+                    day.textContent = i;
+                    calendarGrid.appendChild(day);
+                }
+
+                renderTasks();
+            }
+
+            function renderTasks() {
+                const dayDate = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
+                selectedDateSpan.textContent = selectedDate.toDateString();
+                tasksContainer.innerHTML = '';
+                const dayTasks = tasks[dayDate] || [];
+
+                if (dayTasks.length === 0) {
+                    tasksContainer.innerHTML = '<p class="text-gray-400">No tasks for this day.</p>';
+                } else {
+                    dayTasks.forEach((task, index) => {
+                        const taskDiv = document.createElement('div');
+                        taskDiv.classList.add('flex', 'justify-between', 'items-center', 'p-2', 'bg-gray-800', 'rounded-lg');
+                        taskDiv.innerHTML = `
+                            <p>${task}</p>
+                            <button class="delete-task-btn text-red-400 hover:text-red-600" data-index="${index}"><i class="fas fa-trash"></i></button>
+                        `;
+                        tasksContainer.appendChild(taskDiv);
+                    });
+                }
+            }
+            
+            prevMonthBtn.addEventListener('click', () => {
+                date.setMonth(date.getMonth() - 1);
+                renderCalendar();
+            });
+
+            nextMonthBtn.addEventListener('click', () => {
+                date.setMonth(date.getMonth() + 1);
+                renderCalendar();
+            });
+
+            addTaskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newTask = newTaskInput.value.trim();
+                if (newTask) {
+                    const dayDate = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
+                    if (!tasks[dayDate]) {
+                        tasks[dayDate] = [];
+                    }
+                    tasks[dayDate].push(newTask);
+                    newTaskInput.value = '';
+                    localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                    renderCalendar();
+                }
+            });
+
+            tasksContainer.addEventListener('click', (e) => {
+                if (e.target.closest('.delete-task-btn')) {
+                    const index = e.target.closest('button').dataset.index;
+                    const dayDate = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
+                    tasks[dayDate].splice(index, 1);
+                    localStorage.setItem('calendarTasks', JSON.stringify(tasks));
+                    renderCalendar();
+                }
+            });
+
+
+            // ===================================
+            // AI IMAGE GENERATOR
+            // ===================================
+            const aiImageForm = document.getElementById('ai-image-form');
+            const aiPromptInput = document.getElementById('ai-prompt-input');
+            const aiImageDisplay = document.getElementById('ai-image-display');
+
+            // Use exponential backoff for API calls to handle potential throttling
+            async function fetchWithExponentialBackoff(url, options, retries = 3, delay = 1000) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`API call failed: ${response.statusText}`);
+                    }
+                    return response;
+                } catch (error) {
+                    if (retries > 0 && error.message.includes('429')) { // 429 is Too Many Requests
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return fetchWithExponentialBackoff(url, options, retries - 1, delay * 2);
+                    } else {
+                        throw error;
+                    }
+                }
+            }
+
+            aiImageForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const prompt = aiPromptInput.value.trim();
+                if (!prompt) {
+                    showModal('Error', 'Please enter a prompt.');
+                    return;
+                }
+
+                // Show loading spinner and clear previous image
+                aiImageDisplay.innerHTML = `
+                    <div class="loading-spinner"></div>
+                `;
+                aiPromptInput.disabled = true;
+
+                try {
+                    const payload = { 
+                        instances: [{ prompt: prompt }], 
+                        parameters: { "sampleCount": 1 } 
+                    };
+                    const apiKey = "";
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+
+                    const response = await fetchWithExponentialBackoff(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+                    if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
+                        const imageData = result.predictions[0].bytesBase64Encoded;
+                        const imageUrl = `data:image/png;base64,${imageData}`;
+                        
+                        aiImageDisplay.innerHTML = `<img src="${imageUrl}" alt="${prompt}">`;
+                    } else {
+                        throw new Error('Image generation failed or response was empty.');
+                    }
+                } catch (error) {
+                    console.error('AI Image Generation Error:', error);
+                    aiImageDisplay.innerHTML = `<p class="text-red-400">Failed to generate image. Please try again.</p>`;
+                } finally {
+                    aiPromptInput.disabled = false;
+                }
+            });
+
+
+            // ===================================
+            // INITIALIZATION
+            // ===================================
+            renderFoodItems();
+            updateCartCount();
+            renderStudents();
+            renderCalendar();
+
+            // Trigger fade-in animation for sections
+            const sections = document.querySelectorAll('main section');
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('fade-in-up');
+                        observer.unobserve(entry.target); // Stop observing once animated
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        });
+    </script>
+</body>
+</html>
